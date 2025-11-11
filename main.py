@@ -5,17 +5,12 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from apscheduler.schedulers.blocking import BlockingScheduler
-from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime
 
 from src.shared.config import get_config
 from src.shared.database import Database
 from src.shared.logger import log
 
-from src.trend_spotter.main import TrendSpotter
-from src.content_factory.main import ContentFactory
-from src.monetization.weekly_automation import WeeklyAutomation
 from src.monetization.subscription_manager import SubscriptionManager
 from src.sales_funnel.meal_plan_generator import MealPlanGenerator
 from src.sales_funnel.email_sender import EmailSender
@@ -24,32 +19,47 @@ from src.sales_funnel.email_sender import EmailSender
 class OrganicFunnelAgent:
     """Main orchestrator for the automated funnel system."""
 
-    def __init__(self):
+    def __init__(self, init_all=False):
         self.config = get_config()
         self.db = Database(self.config.database.path)
 
-        # Initialize all modules
-        self.trend_spotter = TrendSpotter(self.config, self.db)
-        self.content_factory = ContentFactory(self.config, self.db)
+        # Only initialize heavy modules if needed (for scheduler/trend/content commands)
+        self.trend_spotter = None
+        self.content_factory = None
+        self.weekly_automation = None
 
-        # Initialize monetization components
+        if init_all:
+            self._init_all_modules()
+
+        # Initialize core components (always needed)
         self.meal_plan_generator = MealPlanGenerator(
             api_key=self.config.openai.api_key,
             model=self.config.openai.model
         )
         self.email_sender = EmailSender(self.config.email.model_dump())
         self.subscription_manager = SubscriptionManager(self.db)
+
+        log.info("Organic Funnel Agent initialized")
+
+    def _init_all_modules(self):
+        """Initialize heavy modules (trend spotter, content factory)."""
+        from src.trend_spotter.main import TrendSpotter
+        from src.content_factory.main import ContentFactory
+        from src.monetization.weekly_automation import WeeklyAutomation
+
+        self.trend_spotter = TrendSpotter(self.config, self.db)
+        self.content_factory = ContentFactory(self.config, self.db)
         self.weekly_automation = WeeklyAutomation(
             self.db,
             self.meal_plan_generator,
             self.email_sender
         )
 
-        log.info("Organic Funnel Agent initialized")
-
     def run_trend_spotting(self):
         """Daily task: Find trending topics."""
         try:
+            if not self.trend_spotter:
+                self._init_all_modules()
             log.info("Running trend spotting...")
             result = self.trend_spotter.run()
             log.info(f"Trend spotting complete. Found: {result['topic']}")
@@ -60,6 +70,8 @@ class OrganicFunnelAgent:
     def run_content_creation(self):
         """Multiple times daily: Create and publish content."""
         try:
+            if not self.content_factory:
+                self._init_all_modules()
             log.info("Running content creation...")
             results = self.content_factory.create_daily_content()
             log.info(f"Created {len(results)} pieces of content")
@@ -70,6 +82,8 @@ class OrganicFunnelAgent:
     def run_weekly_delivery(self):
         """Weekly task: Send meal plans to premium subscribers."""
         try:
+            if not self.weekly_automation:
+                self._init_all_modules()
             log.info("Running weekly meal plan delivery...")
             stats = self.weekly_automation.send_weekly_plans()
             log.info(
@@ -97,6 +111,9 @@ class OrganicFunnelAgent:
 
     def start_scheduler(self):
         """Start the automated scheduler."""
+        from apscheduler.schedulers.blocking import BlockingScheduler
+        from apscheduler.triggers.cron import CronTrigger
+
         scheduler = BlockingScheduler()
 
         # Parse schedule times from config
@@ -167,7 +184,9 @@ def main():
 
     args = parser.parse_args()
 
-    agent = OrganicFunnelAgent()
+    # Only initialize heavy modules for commands that need them
+    init_all = args.command in ['schedule', 'trend', 'content', 'weekly']
+    agent = OrganicFunnelAgent(init_all=init_all)
 
     if args.command == 'schedule':
         # Start the automated scheduler
