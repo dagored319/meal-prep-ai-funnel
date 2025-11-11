@@ -1,0 +1,30 @@
+services:
+  # Web Service - Chatbot
+  - type: web
+    name: meal-prep-ai-chatbot
+    env: python
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt && playwright install chromium && playwright install-deps"
+    startCommand: "python main.py web"
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: FROM_EMAIL
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.0
+
+  # Background Worker - Scheduler (Optional - deploy later)
+  # - type: worker
+  #   name: meal-prep-ai-scheduler
+  #   env: python
+  #   buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+  #   startCommand: "python main.py schedule"
+  #   envVars:
+  #     - key: OPENAI_API_KEY
+  #       sync: false
+  #     - key: SENDGRID_API_KEY
+  #       sync: false
+  #     - key: FROM_EMAIL
+  #       sync: false
