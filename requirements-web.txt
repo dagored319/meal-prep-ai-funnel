@@ -1,0 +1,29 @@
+# Minimal requirements for web app deployment (chatbot only)
+# Use this for Render deployment to avoid heavy dependencies
+
+# Core web framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.10.0
+pydantic-settings>=2.7.0
+python-dotenv>=1.0.0
+
+# Data processing
+pyyaml>=6.0
+
+# LLM integration
+openai>=1.54.0
+
+# Database
+sqlalchemy>=2.0.0
+
+# Email
+sendgrid>=6.11.0
+
+# Web framework
+jinja2>=3.1.0
+python-multipart>=0.0.6
+
+# Utilities
+loguru>=0.7.0
+arrow>=1.3.0

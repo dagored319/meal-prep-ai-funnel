@@ -3,7 +3,7 @@ services:
   - type: web
     name: meal-prep-ai-chatbot
     env: python
-    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt && playwright install chromium && playwright install-deps"
+    buildCommand: "pip install --upgrade pip && pip install -r requirements-web.txt"
     startCommand: "python main.py web"
     envVars:
       - key: OPENAI_API_KEY
